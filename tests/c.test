@@ -812,3 +812,7 @@
 10309  common/align_right_cmt_doxygen_cont-3.cfg          c/align_right_cmt_doxygen_cont.c
 10310  common/align_right_cmt_doxygen_cont-4.cfg          c/align_right_cmt_doxygen_cont.c
 10311  common/align_right_cmt_doxygen_cont-5.cfg          c/align_right_cmt_doxygen_cont.c
+
+# align_func_proto_span: stacks at several levels
+10312  common/align_func_proto_deeper_level-1.cfg       c/align_func_proto_deeper_level.c
+10313  common/align_func_proto_deeper_level-2.cfg       c/align_func_proto_deeper_level.c
