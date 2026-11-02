@@ -12,13 +12,119 @@
 #include "align/stack.h"
 #include "align/tools.h"
 #include "log_rules.h"
-#include <algorithm>
+
+#include <memory>
 #include <vector>
 
 constexpr static auto LCURRENT = LALPROTO;
 
 
 using namespace uncrustify;
+
+
+namespace
+{
+
+//! How to start a new AlignStack.
+struct StackConfig
+{
+   size_t                span;
+   int                   thresh;
+   size_t                gap;
+   AlignStack::StarStyle star_style;
+   AlignStack::StarStyle amp_style;
+};
+
+
+//! What is kept for one (level, brace level).
+struct LevelState
+{
+   std::unique_ptr<AlignStack> names;  //! the function names
+   std::unique_ptr<AlignStack> braces; //! the open braces of single-line functions
+   LineSkipConfig              budget; //! the line skip budget
+};
+
+
+/**
+ * The states per (level, brace level), created on demand. The grid only grows,
+ * so that no pending stack is lost.
+ *
+ * Issue #2771
+ * we align token-1 and token-2 if:
+ *   token-1->GetLevel() == token-2->GetLevel()
+ *   and
+ *   token-1->GetBraceLevel() == token-2->GetBraceLevel()
+ * we don't check if token-1 and token-2 are in the same block
+ */
+class LevelGrid
+{
+public:
+   explicit LevelGrid(const LineSkipConfig &budget)
+      : m_budget(budget)
+   {
+   }
+
+
+   //! Returns the state of the given (level, brace level), creates it if needed.
+   LevelState &At(size_t level, size_t brace_level)
+   {
+      if (level >= m_states.size())
+      {
+         m_states.resize(level + 1);
+      }
+      std::vector<LevelState> &row = m_states[level];
+
+      while (brace_level >= row.size())
+      {
+         row.emplace_back();
+         row.back().budget = m_budget;
+      }
+      return(row[brace_level]);
+   }
+
+
+   //! Calls 'func' with each state, in (level, brace level) order.
+   template<typename Func>
+   void ForEach(Func func)
+   {
+      for (auto &row : m_states)
+      {
+         for (auto &state : row)
+         {
+            func(state);
+         }
+      }
+   }
+
+private:
+   LineSkipConfig                        m_budget;
+   std::vector<std::vector<LevelState> > m_states;
+};
+
+
+//! Returns the stack, starts it if needed.
+AlignStack &get_stack(std::unique_ptr<AlignStack> &stack, const StackConfig &config)
+{
+   if (!stack)
+   {
+      stack = std::make_unique<AlignStack>();
+      stack->Start(config.span, config.thresh);
+      stack->m_gap        = config.gap;
+      stack->m_star_style = config.star_style;
+      stack->m_amp_style  = config.amp_style;
+   }
+   return(*stack);
+}
+
+
+//! Applies the newlines to the stack, if any.
+void new_lines(std::unique_ptr<AlignStack> &stack, size_t cnt)
+{
+   if (stack)
+   {
+      stack->NewLines(cnt);
+   }
+}
 
 
 /**
@@ -28,7 +134,7 @@ using namespace uncrustify;
  * than 'pc', as in a parameter list or in a function body, does not end the
  * line.
  */
-static bool is_after_func_on_line(Chunk *pc)
+bool is_after_func_on_line(Chunk *pc)
 {
    for (Chunk *tmp = pc->GetPrev(); tmp->IsNotNullChunk(); tmp = tmp->GetPrev())
    {
@@ -52,65 +158,59 @@ static bool is_after_func_on_line(Chunk *pc)
 }
 
 
+//! Ends the stack, if any.
+void end_stack(std::unique_ptr<AlignStack> &stack)
+{
+   if (stack)
+   {
+      stack->End();
+      stack.reset();
+   }
+}
+
+} // namespace
+
+
 void align_func_proto(size_t span)
 {
    LOG_FUNC_ENTRY();
 
-   size_t myspan   = span;
-   size_t mythresh = 0;
+   log_rule_B("align_func_proto_thresh");
+   const int mythresh = options::align_func_proto_thresh();
 
    log_rule_B("align_func_proto_gap");
-   size_t mygap = options::align_func_proto_gap();
+   log_rule_B("align_func_proto_star_style");
+   log_rule_B("align_func_proto_amp_style");
+   const StackConfig names_config
+   {
+      span,
+      mythresh,
+      options::align_func_proto_gap(),
+      static_cast<AlignStack::StarStyle>(options::align_func_proto_star_style()),
+      static_cast<AlignStack::StarStyle>(options::align_func_proto_amp_style()),
+   };
 
-   log_rule_B("align_func_proto_thresh");
-   mythresh = options::align_func_proto_thresh();
+   log_rule_B("align_single_line_brace_gap");
+   const StackConfig braces_config
+   {
+      span,
+      mythresh,
+      options::align_single_line_brace_gap(),
+      AlignStack::SS_IGNORE,
+      AlignStack::SS_IGNORE,
+   };
 
    // Line skip configuration (resolve -1 to global value)
    log_rule_B("align_func_proto_span_num_empty_lines");
    log_rule_B("align_func_proto_span_num_pp_lines");
    log_rule_B("align_func_proto_span_num_cmt_lines");
-   LineSkipConfig myskip_cfg = resolve_span_num_config(
+   const LineSkipConfig myskip_cfg = resolve_span_num_config(
       options::align_func_proto_span_num_empty_lines(),
       options::align_func_proto_span_num_pp_lines(),
       options::align_func_proto_span_num_cmt_lines());
 
-   // Issue #2771
-   // we align token-1 and token-2 if:
-   //   token-1->GetLevel() == token-2->GetLevel()
-   //   and
-   //   token-1->GetBraceLevel() == token-2->GetBraceLevel()
-   // we don't check if token-1 and token-2 are in the same block
-
-   log_rule_B("align_func_proto_star_style");
-   size_t mystar_style = options::align_func_proto_star_style();
-
-   log_rule_B("align_func_proto_amp_style");
-   size_t myamp_style = options::align_func_proto_amp_style();
-
-
-   size_t     num_of_column     = 1;
-   size_t     num_of_row        = 1;
-   AlignStack *stack_init_value = nullptr;
-
-
-   // Issue #2984
-   std::vector<std::vector<AlignStack *> >   many_as;
-   // Issue #2771
-   std::vector<std::vector<AlignStack *> >   many_as_brace;
-   // Line skip budgets per (level, brace_level)
-   std::vector<std::vector<LineSkipConfig> > many_skips;
-
-   // init the vector ...
-   many_as.resize(num_of_column, std::vector<AlignStack *>(num_of_row, stack_init_value));
-   many_as_brace.resize(num_of_column, std::vector<AlignStack *>(num_of_row, stack_init_value));
-   many_skips.resize(num_of_column, std::vector<LineSkipConfig>(num_of_row, myskip_cfg));
-
-   log_rule_B("align_single_line_brace_gap");
-   size_t mybr_gap = options::align_single_line_brace_gap();
-
-
-   bool  look_bro = false;
-   Chunk *toadd;
+   LevelGrid grid(myskip_cfg);
+   bool      look_bro = false;
 
    for (Chunk *pc = Chunk::GetHead(); pc->IsNotNullChunk(); pc = pc->GetNext())
    {
@@ -119,26 +219,7 @@ void align_func_proto(size_t span)
               __func__, __LINE__, pc->GetOrigLine(), pc->GetOrigCol(), pc->ElidedText(copy),
               get_token_name(pc->GetType()), pc->GetLevel(), pc->GetBraceLevel());
 
-      // make the vector larger if necessary
-      if (  pc->GetLevel() >= num_of_column                             // Issue #2960
-         || pc->GetBraceLevel() >= num_of_row)
-      {
-         // never make it smaller: the stacks already there would be lost
-         // without being flushed
-         num_of_column = std::max(num_of_column, pc->GetLevel() + 1);
-         num_of_row    = std::max(num_of_row, pc->GetBraceLevel() + 1);
-
-         many_as.resize(num_of_column);
-         many_as_brace.resize(num_of_column);
-         many_skips.resize(num_of_column);
-
-         for (size_t i = 0; i < num_of_column; ++i)
-         {
-            many_as[i].resize(num_of_row);
-            many_as_brace[i].resize(num_of_row);
-            many_skips[i].resize(num_of_row, myskip_cfg);
-         }
-      }
+      LevelState &state = grid.At(pc->GetLevel(), pc->GetBraceLevel());
 
       if (  pc->IsNewline()
          && (  !options::align_func_proto_span_ignore_cont_lines()
@@ -147,55 +228,20 @@ void align_func_proto(size_t span)
             || pc->GetLevel() <= pc->GetBraceLevel()))       // not in the parenthesis
       {
          look_bro = false;
-         AlignStack *stack_at_l_bl = many_as.at(pc->GetLevel()).at(pc->GetBraceLevel());
-
-         if (stack_at_l_bl == nullptr)
-         {
-            // get a Stack
-            stack_at_l_bl = new AlignStack();
-            // start it
-            stack_at_l_bl->Start(myspan, mythresh);
-            stack_at_l_bl->m_gap        = mygap;
-            stack_at_l_bl->m_star_style = static_cast<AlignStack::StarStyle>(mystar_style);
-            stack_at_l_bl->m_amp_style  = static_cast<AlignStack::StarStyle>(myamp_style);
-            // store
-            many_as.at(pc->GetLevel()).at(pc->GetBraceLevel()) = stack_at_l_bl;
-         }
-         stack_at_l_bl->Debug();
 
          // Get filtered newline count once for current level/brace_level
          // This modifies the budget which is shared across all stacks at this level
-         LineSkipConfig &current_budget = many_skips.at(pc->GetLevel()).at(pc->GetBraceLevel());
-         const size_t   nl_cnt          = pc->GetNlCountFiltered(current_budget);
+         const size_t nl_cnt = pc->GetNlCountFiltered(state.budget);
 
          // Apply (filtered) number of newlines, if any left, to all existing stacks
-         for (size_t idx = 0; (nl_cnt > 0) && (idx < num_of_column); idx++)
+         if (nl_cnt > 0)
          {
-            for (size_t idx_brace = 0; idx_brace < num_of_row; idx_brace++)
+            grid.ForEach([nl_cnt](LevelState &st)
             {
-               stack_at_l_bl = many_as.at(idx).at(idx_brace);
-
-               if (stack_at_l_bl != nullptr)
-               {
-                  stack_at_l_bl->NewLines(nl_cnt);
-               }
-            }
+               new_lines(st.names, nl_cnt);
+            });
          }
-
-         AlignStack *stack_at_l_bl_brace = many_as_brace.at(pc->GetLevel()).at(pc->GetBraceLevel());
-
-         if (stack_at_l_bl_brace == nullptr)
-         {
-            // get a Stack
-            stack_at_l_bl_brace = new AlignStack();
-            // start it
-            stack_at_l_bl_brace->Start(myspan, mythresh);
-            stack_at_l_bl_brace->m_gap = mybr_gap;
-            // store
-            many_as_brace.at(pc->GetLevel()).at(pc->GetBraceLevel()) = stack_at_l_bl_brace;
-         }
-         stack_at_l_bl_brace->Debug();
-         stack_at_l_bl_brace->NewLines(nl_cnt);
+         new_lines(state.braces, nl_cnt);
       }
       else if (  (  pc->Is(E_Token::CT_FUNC_PROTO)
                  || (  pc->Is(E_Token::CT_FUNC_DEF)
@@ -204,58 +250,33 @@ void align_func_proto(size_t span)
       {
          log_rule_B("align_single_line_func");
          log_rule_B("align_on_operator");
+         Chunk *toadd = pc;
 
          if (  pc->GetParentType() == E_Token::CT_OPERATOR
             && options::align_on_operator())
          {
             toadd = pc->GetPrevNcNnl();
          }
-         else
-         {
-            toadd = pc;
-         }
          Chunk *tmp = step_back_over_member(toadd);
          LOG_FMT(LAS, "%s(%d): 'tmp' text is '%s', orig line is %zu, orig col is %zu, level is %zu, brace level is %zu\n",
                  __func__, __LINE__, tmp->GetLogText(), tmp->GetOrigLine(), tmp->GetOrigCol(),
                  tmp->GetLevel(), tmp->GetBraceLevel());
-         // test the Stack
-         AlignStack *stack_at_l_bl = many_as.at(pc->GetLevel()).at(pc->GetBraceLevel());
-
-         if (stack_at_l_bl == nullptr)
-         {
-            // get a Stack
-            stack_at_l_bl = new AlignStack();
-            // start it
-            stack_at_l_bl->Start(myspan, mythresh);
-            stack_at_l_bl->m_gap        = mygap;
-            stack_at_l_bl->m_star_style = static_cast<AlignStack::StarStyle>(mystar_style);
-            stack_at_l_bl->m_amp_style  = static_cast<AlignStack::StarStyle>(myamp_style);
-            // store
-            many_as.at(pc->GetLevel()).at(pc->GetBraceLevel()) = stack_at_l_bl;
-         }
-         stack_at_l_bl->Add(tmp);
+         AlignStack &stack = get_stack(state.names, names_config);
+         stack.Add(tmp);
+         stack.Debug();
          // Reset budget for next prototype transition at this (level, brace_level)
-         many_skips.at(pc->GetLevel()).at(pc->GetBraceLevel()) = myskip_cfg;
-         stack_at_l_bl->Debug();
+         state.budget = myskip_cfg;
          log_rule_B("align_single_line_brace");
-         look_bro = (pc->Is(E_Token::CT_FUNC_DEF))
+         look_bro = pc->Is(E_Token::CT_FUNC_DEF)
                     && options::align_single_line_brace();
       }
       else if (  look_bro
               && pc->Is(E_Token::CT_BRACE_OPEN)
               && pc->TestFlags(PCF_ONE_LINER))
       {
-         AlignStack *stack_at_l_bl_brace = many_as_brace.at(pc->GetLevel()).at(pc->GetBraceLevel());
-
-         if (stack_at_l_bl_brace == nullptr)
-         {
-            stack_at_l_bl_brace = new AlignStack();
-            stack_at_l_bl_brace->Start(myspan, mythresh);
-            stack_at_l_bl_brace->m_gap                               = mybr_gap;
-            many_as_brace.at(pc->GetLevel()).at(pc->GetBraceLevel()) = stack_at_l_bl_brace;
-         }
-         stack_at_l_bl_brace->Add(pc);
-         stack_at_l_bl_brace->Debug();
+         AlignStack &stack = get_stack(state.braces, braces_config);
+         stack.Add(pc);
+         stack.Debug();
          look_bro = false;
       }
    }
@@ -263,26 +284,9 @@ void align_func_proto(size_t span)
    LOG_FMT(LAS, "%s(%d):  as\n", __func__, __LINE__);
 
    // purge
-   for (size_t idx = 0; idx < num_of_column; idx++)
+   grid.ForEach([](LevelState &st)
    {
-      for (size_t idx_brace = 0; idx_brace < num_of_row; idx_brace++)
-      {
-         AlignStack *stack_at_l_bl = many_as.at(idx).at(idx_brace);
-
-         if (stack_at_l_bl != nullptr)
-         {
-            stack_at_l_bl->End();
-            delete stack_at_l_bl;
-            stack_at_l_bl = nullptr;
-         }
-         AlignStack *stack_at_l_bl_brace = many_as_brace.at(idx).at(idx_brace);
-
-         if (stack_at_l_bl_brace != nullptr)
-         {
-            stack_at_l_bl_brace->End();
-            delete stack_at_l_bl_brace;
-            stack_at_l_bl_brace = nullptr;
-         }
-      }
-   }
+      end_stack(st.names);
+      end_stack(st.braces);
+   });
 } // align_func_proto
