@@ -178,9 +178,12 @@ Chunk *align_var_def_brace(Chunk const *start, size_t span, size_t *p_nl_count)
          // WARNING: Duplicate from the align_func_proto()
          log_rule_B("align_single_line_func");
 
-         if (  pc->Is(E_Token::CT_FUNC_PROTO)
-            || (  pc->Is(E_Token::CT_FUNC_DEF)
-               && options::align_single_line_func()))
+         // Only the first item of a line is aligned: aligning a second one
+         // would glue its name to its type ('int g(); inthh();').
+         if (  (  pc->Is(E_Token::CT_FUNC_PROTO)
+               || (  pc->Is(E_Token::CT_FUNC_DEF)
+                  && options::align_single_line_func()))
+            && !did_this_line)
          {
             LOG_FMT(LAVDB, "%s(%d): add = '%s', orig line is %zu, orig col is %zu, level is %zu\n",
                     __func__, __LINE__, pc->GetLogText(), pc->GetOrigLine(), pc->GetOrigCol(), pc->GetLevel());
@@ -199,7 +202,8 @@ Chunk *align_var_def_brace(Chunk const *start, size_t span, size_t *p_nl_count)
                toadd = pc;
             }
             as.Add(step_back_over_member(toadd));
-            skip_budget = myskip_cfg; // Reset budget for next variable transition
+            did_this_line = true;
+            skip_budget   = myskip_cfg; // Reset budget for next variable transition
             log_rule_B("align_single_line_brace");
             fp_look_bro = (pc->Is(E_Token::CT_FUNC_DEF))
                           && options::align_single_line_brace();
@@ -248,9 +252,14 @@ Chunk *align_var_def_brace(Chunk const *start, size_t span, size_t *p_nl_count)
 
       if (pc->IsNewline())
       {
-         fp_look_bro   = false;
-         did_this_line = false;
+         fp_look_bro = false;
 
+         // a newline inside parenthesis, as in a parameter list, does not
+         // end the line (the braces start a new align_var_def_brace() call)
+         if (pc->GetLevel() <= pc->GetBraceLevel())
+         {
+            did_this_line = false;
+         }
          size_t nl_cnt = pc->GetNlCountFiltered(skip_budget);
 
          if (nl_cnt > 0)

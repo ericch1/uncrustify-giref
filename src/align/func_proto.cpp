@@ -21,6 +21,37 @@ constexpr static auto LCURRENT = LALPROTO;
 using namespace uncrustify;
 
 
+/**
+ * Whether 'pc' follows another function name on its line, at the same level
+ * and brace level: aligning both names on the same line would glue the second
+ * one to its return type ('int g(); inthh();'). A newline at a deeper level
+ * than 'pc', as in a parameter list or in a function body, does not end the
+ * line.
+ */
+static bool is_after_func_on_line(Chunk *pc)
+{
+   for (Chunk *tmp = pc->GetPrev(); tmp->IsNotNullChunk(); tmp = tmp->GetPrev())
+   {
+      if (  tmp->IsNewline()
+         && tmp->GetLevel() <= pc->GetLevel())
+      {
+         break;
+      }
+
+      if (  (  tmp->Is(E_Token::CT_FUNC_PROTO)
+            || (  tmp->Is(E_Token::CT_FUNC_DEF)
+               && options::align_single_line_func()))
+         && tmp->GetLevel() == pc->GetLevel()
+         && tmp->GetBraceLevel() == pc->GetBraceLevel())
+      {
+         return(true);
+      }
+   }
+
+   return(false);
+}
+
+
 void align_func_proto(size_t span)
 {
    LOG_FUNC_ENTRY();
@@ -165,9 +196,10 @@ void align_func_proto(size_t span)
          stack_at_l_bl_brace->Debug();
          stack_at_l_bl_brace->NewLines(nl_cnt);
       }
-      else if (  pc->Is(E_Token::CT_FUNC_PROTO)
-              || (  pc->Is(E_Token::CT_FUNC_DEF)
-                 && options::align_single_line_func()))
+      else if (  (  pc->Is(E_Token::CT_FUNC_PROTO)
+                 || (  pc->Is(E_Token::CT_FUNC_DEF)
+                    && options::align_single_line_func()))
+              && !is_after_func_on_line(pc))
       {
          log_rule_B("align_single_line_func");
          log_rule_B("align_on_operator");
