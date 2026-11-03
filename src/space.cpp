@@ -3974,7 +3974,23 @@ void space_text()
                // Issue #1854
                if (pc->Is(E_Token::CT_VBRACE_OPEN))
                {
-                  column = next->GetOrigCol();
+                  // keep the original spacing after the chunk before the
+                  // virtual brace: its original column would not take into
+                  // account the spaces changed before it on the line
+                  Chunk *prev = pc->GetPrev();
+
+                  if (  prev->IsNotNullChunk()
+                     && !prev->IsNewline()
+                     && prev->GetOrigLine() == next->GetOrigLine()
+                     && next->GetOrigCol() >= prev->GetOrigColEnd())
+                  {
+                     column = prev->GetColumn() + prev->Len()
+                              + (next->GetOrigCol() - prev->GetOrigColEnd());
+                  }
+                  else
+                  {
+                     column = next->GetOrigCol();
+                  }
                }
             }
             break;
