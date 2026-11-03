@@ -30,6 +30,7 @@ void quick_align_again()
          as.m_star_style  = static_cast<AlignStack::StarStyle>(pc->GetAlignData().star_style);
          as.m_amp_style   = static_cast<AlignStack::StarStyle>(pc->GetAlignData().amp_style);
          as.m_gap         = pc->GetAlignData().gap;
+         as.m_ref_prev    = pc->GetAlignData().ref_prev;
 
          LOG_FMT(LALAGAIN, "%s(%d):   text is '%s', orig line is %zu\n",
                  __func__, __LINE__, pc->GetLogText(), pc->GetOrigLine());

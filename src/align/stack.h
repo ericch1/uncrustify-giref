@@ -39,6 +39,7 @@ public:
    StarStyle  m_star_style;
    StarStyle  m_amp_style;
    bool       m_skip_first; //! do not include the first item if it causes it to be indented
+   bool       m_ref_prev;   //! the reference is the chunk just before the aligned one
    size_t     stackID;      //! for debugging purposes only
 
 
@@ -55,6 +56,7 @@ public:
       , m_star_style(SS_IGNORE)
       , m_amp_style(SS_IGNORE)
       , m_skip_first(false)
+      , m_ref_prev(false)
       , stackID(std::numeric_limits<std::size_t>::max()) // under linux 64 bits: 18446744073709551615
       , m_last_added(0)
    {
@@ -76,6 +78,7 @@ public:
       , m_star_style(ref.m_star_style)
       , m_amp_style(ref.m_amp_style)
       , m_skip_first(ref.m_skip_first)
+      , m_ref_prev(ref.m_ref_prev)
       , stackID(ref.stackID)
       , m_last_added(ref.m_last_added)
    {

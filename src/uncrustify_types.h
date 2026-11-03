@@ -108,6 +108,7 @@ struct AlignmentData
    size_t star_style;  //! AlignStack.m_star_style
    size_t amp_style;   //! AlignStack.m_amp_style
    int    gap;         //! AlignStack.m_gap
+   bool   ref_prev;    //! AlignStack.m_ref_prev
 
    /*
     * col_adj is the amount to alter the column for the token.

@@ -55,6 +55,7 @@ void AlignStack::Start(size_t span, int thresh)
    m_right_align = false;
    m_star_style  = SS_IGNORE;
    m_amp_style   = SS_IGNORE;
+   m_ref_prev    = false;
 } // AlignStack::Start
 
 
@@ -170,8 +171,9 @@ void AlignStack::Add(Chunk *start, size_t seqnum)
    // Find ref. Back up to the real item that is aligned.
    Chunk *prev = start->GetPrev();
 
-   while (  prev->IsPointerOperator()
-         || prev->Is(E_Token::CT_TPAREN_OPEN))
+   while (  !m_ref_prev
+         && (  prev->IsPointerOperator()
+            || prev->Is(E_Token::CT_TPAREN_OPEN)))
    {
       prev = prev->GetPrev();
    }
@@ -542,6 +544,7 @@ void AlignStack::Flush()
          pc->AlignData().right_align = m_right_align;
          pc->AlignData().amp_style   = m_amp_style;
          pc->AlignData().star_style  = m_star_style;
+         pc->AlignData().ref_prev    = m_ref_prev;
       }
       pc->AlignData().gap  = m_gap;
       pc->AlignData().next = m_aligned.GetChunk(idx + 1);

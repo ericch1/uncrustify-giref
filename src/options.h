@@ -4000,6 +4000,30 @@ align_single_line_brace;
 extern BoundedOption<unsigned, 0, 16>
 align_single_line_brace_gap;
 
+// Whether to align the open parenthesis of function prototypes, in the groups
+// of align_func_proto_span. The function definitions are included if
+// align_single_line_func=true. Only the first function of a line is aligned.
+//
+// The constructors and destructors have their own groups, where only their
+// open parenthesis is aligned. They also count for 'the first function of a
+// line', so a function after a constructor on the same line is not aligned
+// (nor its name).
+//
+// The space before the open parenthesis of the functions that can be aligned
+// is set by the alignment: an 'ignore' value of the option giving that space
+// (sp_func_proto_paren, sp_func_class_paren, sp_func_def_paren, their '_empty'
+// variants, sp_angle_paren, ...) is treated as 'remove' ('force' after a
+// comment).
+// Not used if align_mix_var_proto=true.
+// See documentation/align-func-proto-paren.txt.
+extern Option<bool>
+align_func_proto_paren;
+
+// Minimum gap between the function name and the open parenthesis
+// for align_func_proto_paren.
+extern BoundedOption<unsigned, 0, 16>
+align_func_proto_paren_gap;
+
 // (OC) The span for aligning Objective-C message specifications.
 //
 // 0: Don't align (default).

@@ -19,6 +19,7 @@
 #include "space.h"
 
 #include "add_space_table.h"
+#include "align/func_proto.h"
 #include "for_section.h"
 #include "log_rules.h"
 #include "options.h"
@@ -3727,7 +3728,18 @@ const char *decode_IARF(iarf_e av)
 
 static iarf_e do_space_ensured(Chunk *first, Chunk *second, int &min_sp)
 {
-   return(ensure_force_space(first, second, do_space(first, second, min_sp)));
+   iarf_e av = do_space(first, second, min_sp);
+
+   // align_func_proto_paren sets the space before the open parenthesis: with
+   // 'ignore', the space added by the alignment would be kept on the next run.
+   // After a comment, one space is kept.
+   if (  av == IARF_IGNORE
+      && func_proto_paren_is_aligned(second))
+   {
+      log_rule("align_func_proto_paren");
+      av = first->IsComment() ? IARF_FORCE : IARF_REMOVE;
+   }
+   return(ensure_force_space(first, second, av));
 }
 
 

@@ -1,0 +1,146 @@
+===============================================================================
+Aligning the Open Parenthesis of Function Prototypes
+===============================================================================
+
+align_func_proto_span aligns the names of the function prototypes, but not
+their open parenthesis.  align_func_proto_paren = true aligns them too:
+
+  align_func_proto_paren = false          align_func_proto_paren = true
+
+  class Shape                             class Shape
+  {                                       {
+  public:                                 public:
+      Shape();                                Shape         ();
+      explicit Shape(int sides);              explicit Shape(int sides);
+      virtual ~Shape();                       virtual ~Shape();
+
+      double             area() const;        double             area     () const;
+      const std::string& name() const;        const std::string& name     () const;
+      Shape&             operator=(...);      Shape&             operator=(...);
+      void               move(int dx,         void               move     (int dx,
+                              int dy);                                     int dy);
+  };                                      };
+
+(with indent_columns = 4, indent_class = true, align_func_proto_span = 3 and
+align_on_operator = true)
+
+The parameters continued on the following lines follow their open
+parenthesis.
+
+
+What is aligned
+---------------
+
+- The function prototypes (as for the names).
+- The function definitions, when align_single_line_func = true (as for the
+  names: despite its name, this option also takes the definitions written on
+  several lines).  With align_single_line_brace = true, the open braces of
+  the single-line functions are aligned after the parenthesis:
+
+    struct Counter
+    {
+        Counter() {}
+        int  get  () const { return value; }
+        void reset()       { value = 0; }
+    };
+
+- The constructors and destructors, including '= default' and '= delete',
+  and their definitions when align_single_line_func = true.  They have no
+  return type, so their names are not aligned and they have their own groups
+  (see below).  A constructor call that the tokenizer can take for a
+  constructor is not aligned: a delegating or base class call, as
+  'Derived(0)' in 'Derived() : Derived(0) {}', a default member initializer,
+  as 'Point(0)' in 'Point origin = Point(0);', or a 'new' expression.
+- Operators, with or without align_on_operator: 'V operator*(double k);'
+  aligns its '(' after the '*'.
+- Template arguments are skipped: in 'T get<T>(int i);', the '(' after the
+  template arguments is aligned.
+- Only the first function of a line is aligned (constructors and destructors
+  included): in 'int a(); int bb();', 'bb' is left as it is (nor is its
+  name).  So, with this option, a function after a constructor on
+  the same line, as 'int f()' in 'S(); int f();', loses its name alignment.
+- The open parenthesis must be on the same line as the function name.
+  A prototype with its open parenthesis on the next line is not aligned.
+- A function with two parameter lists, as the D template 'T get(T)(int i);',
+  is not aligned.  The D constructors and destructors ('this(...)',
+  '~this()') are not aligned either.
+- A newline between the name and its open parenthesis, also inside a
+  comment, prevents the alignment.
+
+The option does nothing when align_mix_var_proto = true, since the prototypes
+are then aligned with the variable definitions by align_var_def_*.
+
+
+Groups
+------
+
+The open parenthesis of the functions are grouped like their names, with
+their own alignment stacks: align_func_proto_span and the
+align_func_proto_span_num_{empty,pp,cmt}_lines budgets (see
+align-span-line-filters.txt) apply the same way, and a prototype written on
+several lines counts all its lines for the span (except a constructor:
+the tokenizer flags the newlines of its parameter list as in a function
+call, which do not count).  The groups can still end
+up different from the ones of the names:
+
+- align_func_proto_thresh is checked on the columns of the open parenthesis,
+  not on the ones of the names.
+- A prototype with its open parenthesis on the next line keeps the group of
+  the names going, but has no parenthesis to add to the group of the
+  parenthesis.
+
+The constructors and destructors are grouped separately, with the same
+options and their own line skip budgets.  For the groups of the functions,
+a constructor line is an ordinary line, as for the names, and the other way
+around:
+
+    class Point                              (align_func_proto_span = 2)
+    {
+    public:
+        int           x   () const;
+        Point(int x, int y);
+        unsigned long hash() const;
+    };
+
+align_func_proto_paren_gap sets the minimum number of spaces between the
+longest name of a group and its open parenthesis (default 0):
+
+  align_func_proto_paren_gap = 1
+
+      double             area      () const;
+      const std::string& name      () const;
+      Shape&             operator= (const Shape& other);
+
+
+Space before the open parenthesis
+---------------------------------
+
+The option giving the space before the open parenthesis (sp_func_proto_paren,
+sp_func_class_paren, sp_func_def_paren, their '_empty' variants, or for
+instance sp_angle_paren after template arguments) still sets the space after
+the longest name of a group ('add' or 'force' keeps one space there).
+
+The alignment adds spaces before the other open parenthesis.  With 'ignore',
+these spaces would be kept as they are on the next run and could change the
+groups (for instance with a threshold).  So, when align_func_proto_paren =
+true, an 'ignore' value is treated as 'remove' before the open parenthesis of
+the functions that can be aligned (even a function alone in its group),
+whatever option gives it.  After a comment between the name and the
+parenthesis, it is treated as 'force': exactly one space is kept.
+
+
+Limitations
+-----------
+
+With code_width, splitting a line made longer by the alignment (for instance
+between a function name and its open parenthesis, or between two functions)
+can change the output on the next run.
+
+With align_keep_extra_space = true and another alignment on the same lines
+(for instance align_assign_span for '= 0' or default arguments), the output
+keeps growing on each run.
+
+With indent_func_def_param_paren_pos_threshold (and its proto, call and
+class variants), which depend on the original column of the open
+parenthesis, moving that parenthesis can change the output on the next run.
+This already happens with the alignment of the names.
