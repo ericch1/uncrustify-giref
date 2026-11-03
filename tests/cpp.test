@@ -1762,6 +1762,27 @@
 35011  cpp/align_func_proto_nl_fdef_brace-1.cfg     cpp/align_func_proto_nl_fdef_brace.cpp
 35012  cpp/align_func_proto_nl_fdef_brace-2.cfg     cpp/align_func_proto_nl_fdef_brace.cpp
 
+# align_func_proto_paren
+35013  common/align_func_proto_paren-1.cfg          cpp/align_func_proto_paren.cpp
+35014  common/align_func_proto_paren-2.cfg          cpp/align_func_proto_paren.cpp
+35015  common/align_func_proto_paren-3.cfg          cpp/align_func_proto_paren.cpp
+35016  common/align_func_proto_paren-4.cfg          cpp/align_func_proto_paren.cpp
+35017  common/align_func_proto_paren-5.cfg          cpp/align_func_proto_paren.cpp
+35018  common/align_func_proto_paren-6.cfg          cpp/align_func_proto_paren.cpp
+35019  common/align_func_proto_paren-7.cfg          cpp/align_func_proto_paren.cpp
+35020  common/align_func_proto_paren-8.cfg          cpp/align_func_proto_paren.cpp
+35021  common/align_func_proto_paren-9.cfg          cpp/align_func_proto_paren.cpp
+35022  common/align_func_proto_paren-10.cfg         cpp/align_func_proto_paren.cpp
+35023  common/align_func_proto_paren-11.cfg         cpp/align_func_proto_paren.cpp
+35024  common/align_func_proto_paren-12.cfg         cpp/align_func_proto_paren.cpp
+35025  common/align_func_proto_paren-13.cfg         cpp/align_func_proto_paren.cpp
+35026  common/align_func_proto_paren-14.cfg         cpp/align_func_proto_paren.cpp
+35027  common/align_func_proto_paren-15.cfg         cpp/align_func_proto_paren.cpp
+35028  common/align_func_proto_paren-16.cfg         cpp/align_func_proto_paren.cpp
+
+# align_func_proto_paren: a comment before an open parenthesis, with an absolute threshold
+35029  common/align_func_proto_paren-15.cfg         cpp/align_func_proto_paren_cmt.cpp
+
 60180  cpp/declspec_var_def.cfg                             cpp/declspec_extern_c.cpp
 60181  cpp/declspec_var_def.cfg                             cpp/declspec_single.cpp
 60182  cpp/declspec_var_def.cfg                             cpp/declspec_func_decl.cpp

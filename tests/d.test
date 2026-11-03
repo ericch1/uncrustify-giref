@@ -64,3 +64,7 @@
 40504  common/sp_after_type-r.cfg                 d/type_spacing000.d
 40505  common/sp_after_type-f.cfg                 d/type_spacing000.d
 40506  d/sp_after_type-a.cfg                      d/type_spacing000.d
+
+# align_func_proto_paren
+40507  common/align_func_proto_paren-2.cfg          d/align_func_proto_paren.d
+40508  common/align_func_proto_paren-13.cfg         d/align_func_proto_paren.d

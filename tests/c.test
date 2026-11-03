@@ -833,3 +833,21 @@
 10322  common/space_after_vbrace_open-1.cfg         c/space_after_vbrace_open.c
 10323  common/space_after_vbrace_open-2.cfg         c/space_after_vbrace_open.c
 10324  common/space_after_vbrace_open-3.cfg         c/space_after_vbrace_open.c
+
+# align_func_proto_paren
+10325  common/align_func_proto_paren-1.cfg          c/align_func_proto_paren.c
+10326  common/align_func_proto_paren-2.cfg          c/align_func_proto_paren.c
+10327  common/align_func_proto_paren-3.cfg          c/align_func_proto_paren.c
+10328  common/align_func_proto_paren-4.cfg          c/align_func_proto_paren.c
+10329  common/align_func_proto_paren-5.cfg          c/align_func_proto_paren.c
+10330  common/align_func_proto_paren-6.cfg          c/align_func_proto_paren.c
+10331  common/align_func_proto_paren-7.cfg          c/align_func_proto_paren.c
+10332  common/align_func_proto_paren-8.cfg          c/align_func_proto_paren.c
+10333  common/align_func_proto_paren-9.cfg          c/align_func_proto_paren.c
+10334  common/align_func_proto_paren-10.cfg         c/align_func_proto_paren.c
+10335  common/align_func_proto_paren-11.cfg         c/align_func_proto_paren.c
+10336  common/align_func_proto_paren-12.cfg         c/align_func_proto_paren.c
+10337  common/align_func_proto_paren-13.cfg         c/align_func_proto_paren.c
+10338  common/align_func_proto_paren-14.cfg         c/align_func_proto_paren.c
+10339  common/align_func_proto_paren-15.cfg         c/align_func_proto_paren.c
+10340  common/align_func_proto_paren-16.cfg         c/align_func_proto_paren.c

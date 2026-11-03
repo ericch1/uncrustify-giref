@@ -115,6 +115,10 @@
 12201  cs/comma-cs-i.cfg                            cs/comma.cs
 12202  cs/comma-cs-r.cfg                            cs/comma.cs
 
+# align_func_proto_paren
+12203  common/align_func_proto_paren-2.cfg          cs/align_func_proto_paren.cs
+12204  common/align_func_proto_paren-5.cfg          cs/align_func_proto_paren.cs
+
 20010  cs/UNI-32658.cfg                             cs/UNI-32658.cs
 20011  cs/bug_1620.cfg                              cs/bug_1620.cs
 

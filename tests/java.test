@@ -46,3 +46,7 @@
 80306  java/leading-tabs-for-java-lambda.cfg             java/leading-tabs-for-java-lambda.java
 
 80400  java/Issue_1541.cfg                               java/Issue_1541.java
+
+# align_func_proto_paren
+80401  common/align_func_proto_paren-2.cfg          java/align_func_proto_paren.java
+80402  common/align_func_proto_paren-5.cfg          java/align_func_proto_paren.java
